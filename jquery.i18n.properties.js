@@ -10,7 +10,7 @@
  *              by Keith Wood (kbwood{at}iinet.com.au) June 2007
  *
  *****************************************************************************/
-
+"use strict";
 (function ($) {
 
     $.i18n = {};
@@ -55,7 +55,6 @@
             name: 'Messages',
             language: '',
             path: '',
-            namespace: null,
             mode: 'vars',
             cache: false,
             encoding: 'UTF-8',
@@ -65,14 +64,6 @@
 
         settings = $.extend(defaults, settings);
 
-        if (settings.namespace && typeof settings.namespace == 'string') {
-            // A namespace has been supplied, initialise it.
-            if (settings.namespace.match(/^[a-z]*$/)) {
-                $.i18n.map[settings.namespace] = {};
-            } else {
-                settings.namespace = null;
-            }
-        }
 
         // Ensure a trailing slash on the path
         if (!settings.path.match(/\/$/)) settings.path += '/';
@@ -92,9 +83,9 @@
         files.forEach(function (file) {
             var longFileName, fileNames;
             var longCode = settings.language;
-                longFileName = settings.path + file + '_' + longCode + '.properties';
-                fileNames = [longFileName];
-                 loadAndParseFiles(fileNames, settings);
+            longFileName = settings.path + file + '_' + longCode + '.properties';
+            fileNames = [longFileName];
+            loadAndParseFiles(fileNames, settings);
         });
 
         // call callback
@@ -110,50 +101,31 @@
     $.i18n.prop = function (key) {
 
         var args = [].slice.call(arguments);
-
-        var phvList, namespace;
-        if (args.length == 2) {
-            if ($.isArray(args[1])) {
-                // An array was passed as the second parameter, so assume it is the list of place holder values.
-                phvList = args[1];
-            } else if (typeof args[1] === 'object') {
-                // Second argument is an options object {namespace: 'mynamespace', replacements: ['egg', 'nog']}
-                namespace = args[1].namespace;
-                var replacements = args[1].replacements;
-                args.splice(-1, 1);
-                if (replacements) {
-                    Array.prototype.push.apply(args, replacements);
-                }
-            }
-        }
-
-        var value = (namespace) ? $.i18n.map[namespace][key] : $.i18n.map[key];
-        if (value === null) {
-            return '[' + ((namespace) ? namespace + '#' + key : key) + ']';
-        }
+        var phvList;
+        var value = $.i18n.map[key];
 
         // Place holder replacement
         /**
-        * Tested with:
-        *   test.t1=asdf ''{0}''
-        *   test.t2=asdf '{0}' '{1}'{1}'zxcv
-        *   test.t3=This is \"a quote" 'a''{0}''s'd{fgh{ij'
-        *   test.t4="'''{'0}''" {0}{a}
-        *   test.t5="'''{0}'''" {1}
-        *   test.t6=a {1} b {0} c
-        *   test.t7=a 'quoted \\ s\ttringy' \t\t x
-        *
-        * Produces:
-        *   test.t1, p1 ==> asdf 'p1'
-        *   test.t2, p1 ==> asdf {0} {1}{1}zxcv
-        *   test.t3, p1 ==> This is "a quote" a'{0}'sd{fgh{ij
-        *   test.t4, p1 ==> "'{0}'" p1{a}
-        *   test.t5, p1 ==> "'{0}'" {1}
-        *   test.t6, p1 ==> a {1} b p1 c
-        *   test.t6, p1, p2 ==> a p2 b p1 c
-        *   test.t6, p1, p2, p3 ==> a p2 b p1 c
-        *   test.t7 ==> a quoted \ s	tringy 		 x
-        */
+         * Tested with:
+         *   test.t1=asdf ''{0}''
+         *   test.t2=asdf '{0}' '{1}'{1}'zxcv
+         *   test.t3=This is \"a quote" 'a''{0}''s'd{fgh{ij'
+         *   test.t4="'''{'0}''" {0}{a}
+         *   test.t5="'''{0}'''" {1}
+         *   test.t6=a {1} b {0} c
+         *   test.t7=a 'quoted \\ s\ttringy' \t\t x
+         *
+         * Produces:
+         *   test.t1, p1 ==> asdf 'p1'
+         *   test.t2, p1 ==> asdf {0} {1}{1}zxcv
+         *   test.t3, p1 ==> This is "a quote" a'{0}'sd{fgh{ij
+         *   test.t4, p1 ==> "'{0}'" p1{a}
+         *   test.t5, p1 ==> "'{0}'" {1}
+         *   test.t6, p1 ==> a {1} b p1 c
+         *   test.t6, p1, p2 ==> a p2 b p1 c
+         *   test.t6, p1, p2, p3 ==> a p2 b p1 c
+         *   test.t7 ==> a quoted \ s	tringy 		 x
+         */
 
         var i;
         if (typeof(value) == 'string') {
@@ -240,12 +212,7 @@
             }
             value = arr;
 
-            // Make the array the value for the entry.
-            if (namespace) {
-                $.i18n.map[settings.namespace][key] = arr;
-            } else {
-                $.i18n.map[key] = arr;
-            }
+            $.i18n.map[key] = arr;
         }
 
         if (value.length === 0) {
@@ -284,19 +251,19 @@
 
     function loadAndParseFiles(fileNames, settings) {
 
-	    if (fileNames !== null && fileNames.length > 0) {
-		    loadAndParseFile(fileNames[0], settings, function () {
-			    fileNames.shift();
-			    loadAndParseFiles(fileNames,settings);
-		    });
-	    } else {
+        if (fileNames !== null && fileNames.length > 0) {
+            loadAndParseFile(fileNames[0], settings, function () {
+                fileNames.shift();
+                loadAndParseFiles(fileNames,settings);
+            });
+        } else {
             callbackIfComplete(settings);
         }
     }
 
     /** Load and parse .properties files */
     function loadAndParseFile(filename, settings, nextFile) {
-  	    if (filename !== null && typeof filename !== 'undefined') {
+        if (filename !== null && typeof filename !== 'undefined') {
             $.ajax({
                 url: filename,
                 async: settings.async,
@@ -354,48 +321,14 @@
                                 value = value.replace(match, unescapeUnicode(match));
                             });
                         }
-                        // add to map
-                        if (settings.namespace) {
-                            $.i18n.map[settings.namespace][name] = value;
-                        } else {
-                            $.i18n.map[name] = value;
-                        }
+                        $.i18n.map[name] = value;
                     }
 
                     /** Mode: bundle keys as vars/functions */
                     if (settings.mode == 'vars' || settings.mode == 'both') {
                         value = value.replace(/"/g, '\\"'); // escape quotation mark (")
-
-                        // make sure namespaced key exists (eg, 'some.key')
-                        checkKeyNamespace(name);
-
-                        // value with variable substitutions
-                        if (regPlaceHolder.test(value)) {
-                            var parts = value.split(regPlaceHolder);
-                            // process function args
-                            var first = true;
-                            var fnArgs = '';
-                            var usedArgs = [];
-                            parts.forEach(function (part) {
-
-                                if (regPlaceHolder.test(part) && (usedArgs.length === 0 || usedArgs.indexOf(part) == -1)) {
-                                    if (!first) {
-                                        fnArgs += ',';
-                                    }
-                                    fnArgs += part.replace(regRepPlaceHolder, 'v$1');
-                                    usedArgs.push(part);
-                                    first = false;
-                                }
-                            });
-                            parsed += name + '=function(' + fnArgs + '){';
-                            // process function body
-                            var fnExpr = '"' + value.replace(regRepPlaceHolder, '"+v$1+"') + '"';
-                            parsed += 'return ' + fnExpr + ';' + '};';
-                            // simple value
-                        } else {
-                            parsed += name + '="' + value + '";';
-                        }
-                    } // END: Mode: bundle keys as vars/functions
+                        parsed += name + '="' + value + '", ';
+                    }
                 } // END: if(pair.length > 0)
             } // END: skip comments
         }
@@ -403,36 +336,12 @@
         settings.filesLoaded += 1;
     }
 
-    /** Make sure namespace exists (for keys with dots in name) */
-    // TODO key parts that start with numbers quietly fail. i.e. month.short.1=Jan
-    function checkKeyNamespace(key) {
-
-        var regDot = /\./;
-        if (regDot.test(key)) {
-            var fullname = '';
-            var names = key.split(/\./);
-            for (var i=0,j=names.length;i<j;i++) {
-                var name = names[i];
-
-                if (i > 0) {
-                    fullname += '.';
-                }
-
-                fullname += name;
-                if (eval('typeof ' + fullname + ' == "undefined"')) {
-                    eval(fullname + '={};');
-                }
-            }
-        }
-    }
-
     /** Ensure language code is in the format aa_AA. */
     $.i18n.normaliseLanguageCode = function (settings) {
-
         var lang = settings.language;
         if (!lang || lang.length < 2) {
             lang = (navigator.languages && navigator.languages.length > 0) ? navigator.languages[0]
-                                        : (navigator.language || navigator.userLanguage /* IE */ || 'en');
+                : (navigator.language || navigator.userLanguage /* IE */ || 'en');
         }
 
         lang = lang.toLowerCase();
