@@ -4,8 +4,8 @@
  * Dual licensed under the GPL (http://dev.jquery.com/browser/trunk/jquery/GPL-LICENSE.txt) and
  * MIT (http://dev.jquery.com/browser/trunk/jquery/MIT-LICENSE.txt) licenses.
  *
- * @version     1.2.7
- * @url         https://github.com/jquery-i18n-properties/jquery-i18n-properties
+ * @version     1.2.7 （注意，针对baison有修改：1. 默认一次请求当前的语言包，而不是所有的语言包， 2. 去掉debug）
+ * @url        https://github.com/hoshn/jquery-i18n-properties/edit/master/jquery.i18n.properties.js
  * @inspiration Localisation assistance for jQuery (http://keith-wood.name/localisation.html)
  *              by Keith Wood (kbwood{at}iinet.com.au) June 2007
  *
@@ -21,9 +21,6 @@
      */
     $.i18n.map = {};
 
-    var debug = function (message) {
-        window.console && console.log('i18n::' + message);
-    };
 
     /**
      * Load and parse message bundle files (.properties),
@@ -48,7 +45,6 @@
      * @param  language    (string, optional) language/country code (eg, 'en', 'en_US', 'pt_BR'). if not specified, language reported by the browser will be used instead.
      * @param  path      (string, optional) path of directory that contains file to load
      * @param  mode      (string, optional) whether bundles keys are available as JavaScript variables/functions or as a map (eg, 'vars' or 'map')
-     * @param  debug     (boolean, optional) whether debug statements are logged at the console
      * @param  cache        (boolean, optional) whether bundles should be cached by the browser, or forcibly reloaded on each page load. Defaults to false (i.e. forcibly reloaded)
      * @param  encoding  (string, optional) the encoding to request for bundles. Property file resource bundles are specified to be in ISO-8859-1 format. Defaults to UTF-8 for backward compatibility.
      * @param  callback     (function, optional) callback function to be called after script is terminated
@@ -62,7 +58,6 @@
             namespace: null,
             mode: 'vars',
             cache: false,
-            debug: false,
             encoding: 'UTF-8',
             async: false,
             callback: null
@@ -75,7 +70,6 @@
             if (settings.namespace.match(/^[a-z]*$/)) {
                 $.i18n.map[settings.namespace] = {};
             } else {
-                debug('Namespaces can only be lower case letters, a - z');
                 settings.namespace = null;
             }
         }
@@ -92,29 +86,15 @@
         // A locale is at least a language code which means at least two files per name. If
         // we also have a country code, thats an extra file per name.
         settings.totalFiles = (files.length * 2) + ((settings.language.length >= 5) ? files.length : 0);
-        if (settings.debug) {
-            debug('totalFiles: ' + settings.totalFiles);
-        }
 
         settings.filesLoaded = 0;
 
         files.forEach(function (file) {
-
-            var defaultFileName, shortFileName, longFileName, fileNames;
-            // 1. load base (eg, Messages.properties)
-            defaultFileName = settings.path + file + '.properties';
-            // 2. with language code (eg, Messages_pt.properties)
-            var shortCode = settings.language.substring(0, 2);
-            shortFileName = settings.path + file + '_' + shortCode + '.properties';
-            // 3. with language code and country code (eg, Messages_pt_BR.properties)
-            if (settings.language.length >= 5) {
-                var longCode = settings.language.substring(0, 5);
+            var longFileName, fileNames;
+            var longCode = settings.language;
                 longFileName = settings.path + file + '_' + longCode + '.properties';
-                fileNames = [defaultFileName, shortFileName, longFileName];
-            } else {
-                fileNames = [defaultFileName, shortFileName];
-            }
-            loadAndParseFiles(fileNames, settings);
+                fileNames = [longFileName];
+                 loadAndParseFiles(fileNames, settings);
         });
 
         // call callback
@@ -127,7 +107,7 @@
      * When configured with mode: 'map', allows access to bundle values by specifying its key.
      * Eg, jQuery.i18n.prop('com.company.bundles.menu_add')
      */
-    $.i18n.prop = function (key /* Add parameters as function arguments as necessary  */) {
+    $.i18n.prop = function (key) {
 
         var args = [].slice.call(arguments);
 
@@ -293,13 +273,6 @@
     };
 
     function callbackIfComplete(settings) {
-
-        if (settings.debug) {
-            debug('callbackIfComplete()');
-            debug('totalFiles: ' + settings.totalFiles);
-            debug('filesLoaded: ' + settings.filesLoaded);
-        }
-
         if (settings.async) {
             if (settings.filesLoaded === settings.totalFiles) {
                 if (settings.callback) {
@@ -310,8 +283,6 @@
     }
 
     function loadAndParseFiles(fileNames, settings) {
-
-        if (settings.debug) debug('loadAndParseFiles');
 
 	    if (fileNames !== null && fileNames.length > 0) {
 		    loadAndParseFile(fileNames[0], settings, function () {
@@ -325,13 +296,6 @@
 
     /** Load and parse .properties files */
     function loadAndParseFile(filename, settings, nextFile) {
-
-        if (settings.debug) {
-            debug('loadAndParseFile(\'' + filename +'\')');
-            debug('totalFiles: ' + settings.totalFiles);
-            debug('filesLoaded: ' + settings.filesLoaded);
-        }
-
   	    if (filename !== null && typeof filename !== 'undefined') {
             $.ajax({
                 url: filename,
@@ -339,20 +303,10 @@
                 cache: settings.cache,
                 dataType: 'text',
                 success: function (data, status) {
-
-                    if (settings.debug) {
-                        debug('Succeeded in downloading ' + filename + '.');
-                        debug(data);
-                    }
-
                     parseData(data, settings);
                     nextFile();
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
-
-                    if (settings.debug) {
-                        debug('Failed to download or parse ' + filename + '. errorThrown: ' + errorThrown);
-                    }
                     if (jqXHR.status === 404) {
                         settings.totalFiles -= 1;
                     }
@@ -477,10 +431,8 @@
 
         var lang = settings.language;
         if (!lang || lang.length < 2) {
-            if (settings.debug) debug('No language supplied. Pulling it from the browser ...');
             lang = (navigator.languages && navigator.languages.length > 0) ? navigator.languages[0]
                                         : (navigator.language || navigator.userLanguage /* IE */ || 'en');
-            if (settings.debug) debug('Language from browser: ' + lang);
         }
 
         lang = lang.toLowerCase();
